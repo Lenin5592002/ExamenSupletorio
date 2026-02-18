@@ -16,7 +16,7 @@ import os
 
 logging.basicConfig(
     level=logging.INFO,
-    format=f"[%(asctime)s][%(levelname)s][{os.environ.get('USERNAME')}] %(message)s",
+    format="[%(asctime)s][%(levelname)s][" + os.environ.get("USERNAME", "user") + "] %(message)s",
     stream=stdout,
     datefmt="%m-%d %H:%M:%S",
 )
@@ -26,7 +26,7 @@ import numpy as np
 
 
 # ####################################################################
-def eliminacion_gaussiana(A: np.ndarray) -> np.ndarray:
+def eliminacion_gaussiana(A: np.ndarray) -> tuple[np.ndarray, dict[str, int]]:
     """Resuelve un sistema de ecuaciones lineales mediante el método de eliminación gaussiana.
 
     ## Parameters
@@ -36,6 +36,8 @@ def eliminacion_gaussiana(A: np.ndarray) -> np.ndarray:
     ## Return
 
     ``solucion``: vector con la solución del sistema de ecuaciones lineales.
+    
+    ``operaciones``: diccionario con el conteo de operaciones aritméticas.
 
     """
     if not isinstance(A, np.ndarray):
@@ -43,6 +45,7 @@ def eliminacion_gaussiana(A: np.ndarray) -> np.ndarray:
         A = np.array(A, dtype=float)
     assert A.shape[0] == A.shape[1] - 1, "La matriz A debe ser de tamaño n-by-(n+1)."
     n = A.shape[0]
+    operaciones = {"sumas_restas": 0, "muls_divs": 0}
 
     for i in range(0, n - 1):  # loop por columna
 
@@ -75,6 +78,16 @@ def eliminacion_gaussiana(A: np.ndarray) -> np.ndarray:
         # --- Eliminación: loop por fila
         for j in range(i + 1, n):
             m = A[j, i] / A[i, i]
+            operaciones["muls_divs"] += 1
+
+            # La operación A[j, i:] = A[j, i:] - m * A[i, i:] implica:
+            # 1. Multiplicación de un escalar (m) por un vector (A[i, i:]).
+            # 2. Resta de dos vectores.
+            # El número de elementos en el slice es (n + 1 - i).
+            elementos_en_fila = n + 1 - i
+            operaciones["muls_divs"] += elementos_en_fila
+            operaciones["sumas_restas"] += elementos_en_fila
+
             A[j, i:] = A[j, i:] - m * A[i, i:]
 
         logging.info(f"\n{A}")
@@ -82,18 +95,30 @@ def eliminacion_gaussiana(A: np.ndarray) -> np.ndarray:
     if A[n - 1, n - 1] == 0:
         raise ValueError("No existe solución única.")
 
-        print(f"\n{A}")
     # --- Sustitución hacia atrás
     solucion = np.zeros(n)
     solucion[n - 1] = A[n - 1, n] / A[n - 1, n - 1]
+    operaciones["muls_divs"] += 1
 
     for i in range(n - 2, -1, -1):
         suma = 0
+        
+        # Contamos las operaciones en el bucle de la suma
+        # El bucle se ejecuta (n - 1 - i) veces.
+        # En cada iteración hay 1 multiplicación y 1 suma.
+        num_terminos_suma = n - 1 - i
+        operaciones["muls_divs"] += num_terminos_suma
+        operaciones["sumas_restas"] += num_terminos_suma
+
         for j in range(i + 1, n):
             suma += A[i, j] * solucion[j]
+
+        # Contamos la resta y la división final
+        operaciones["sumas_restas"] += 1  # (A[i, n] - suma)
+        operaciones["muls_divs"] += 1     # (... / A[i, i])
         solucion[i] = (A[i, n] - suma) / A[i, i]
 
-    return solucion
+    return solucion, operaciones
 
 
 # ####################################################################

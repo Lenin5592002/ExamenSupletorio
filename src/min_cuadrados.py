@@ -19,7 +19,7 @@ import os
 
 logging.basicConfig(
     level=logging.INFO,
-    format=f"[%(asctime)s][%(levelname)s][{os.environ.get('USERNAME')}] %(message)s",
+    format="[%(asctime)s][%(levelname)s][" + os.environ.get("USERNAME", "user") + "] %(message)s",
     stream=stdout,
     datefmt="%m-%d %H:%M:%S",
 )
@@ -29,7 +29,7 @@ import numpy as np
 
 from typing import Callable
 
-from src import eliminacion_gaussiana
+from .linear_sist_methods import eliminacion_gaussiana
 
 
 # ####################################################################
@@ -37,7 +37,7 @@ def ajustar_min_cuadrados(
     xs: list,
     ys: list,
     gradiente: list[Callable[[list[float], list[float]], tuple]],
-) -> None:
+) -> tuple[np.ndarray, dict[str, int]]:
     """Resuelve el sistema de ecuaciones para encontrar los parámetros del método de mínimos cuadrados. Plantea el sistema de ecuaciones lineales al reemplazar los valores de ``xs`` y ``ys`` en las derivadas parciales.
 
     ## Parameters
